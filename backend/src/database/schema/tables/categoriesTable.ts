@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import * as p from "drizzle-orm/pg-core";
 
-export const categoriesTable = p.pgTable(
+export const categoriesTable = p.snakeCase.table(
   "categories",
   {
     id: p.integer().primaryKey().generatedAlwaysAsIdentity(),

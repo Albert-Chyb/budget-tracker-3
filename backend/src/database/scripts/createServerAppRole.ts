@@ -2,9 +2,9 @@ import "dotenv/config";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { serverAppRole } from "../schema/roles/serverAppRole";
 
-const db = drizzle(process.env.DATABASE_URL!);
+const db = drizzle(process.env.DATABASE_SUPERUSER_URL!);
 
-const password = prompt("Enter password for server_app: \n");
+const password = prompt("Enter password for server_app: ");
 
 if (!password) {
   throw new Error("Password cannot be empty");

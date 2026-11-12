@@ -8,5 +8,7 @@ export const categoriesTable = p.snakeCase.table(
     name: p.text().notNull(),
     createdAt: p.timestamp({ withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [p.check("name_not_blank", sql`length(trim(${t.name})) > 0`)],
+  (t) => [
+    p.check("categories_name_not_blank", sql`length(trim(${t.name})) > 0`),
+  ],
 );

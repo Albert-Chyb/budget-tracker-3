@@ -10,7 +10,7 @@ export const walletsTable = p.snakeCase.table(
     balance: p.integer().notNull(),
   },
   (t) => [
-    p.check("wallet_name_not_blank", sql`length(trim(${t.name})) > 0`),
-    p.check("wallet_balance_nonnegative", sql`${t.balance} >= 0`),
+    p.check("wallets_name_not_blank", sql`length(trim(${t.name})) > 0`),
+    p.check("wallets_balance_nonnegative", sql`${t.balance} >= 0`),
   ],
 );

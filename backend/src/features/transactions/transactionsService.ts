@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { database } from "../../database/database";
 import { transactionsTable } from "../../database/schema/tables/transactionsTable";
+import { DatabaseOperationFailedError } from "../../shared/errors/DatabaseOperationFailedError";
+import { RecordNotFoundError } from "../../shared/errors/RecrodNotFoundError";
 import type {
   Transaction,
   TransactionInsert,
@@ -40,7 +42,9 @@ async function getTransactionOrThrow(
 ): Promise<Transaction> {
   const transaction = await getTransaction(id);
   if (transaction === undefined)
-    throw new Error(`Transaction with id of ${id} does not exist.`);
+    throw new RecordNotFoundError(
+      `Transaction with id of ${id} was not found.`,
+    );
   return transaction;
 }
 
@@ -51,7 +55,7 @@ export async function createTransaction(
     .insert(transactionsTable)
     .values(data)
     .returning({ id: transactionsTable.id });
-  if (transaction === undefined) throw new Error("Transaction insert failed");
+  if (transaction === undefined) throw new DatabaseOperationFailedError();
   return getTransactionOrThrow(transaction.id);
 }
 
@@ -65,7 +69,9 @@ export async function updateTransaction(
     .where(eq(transactionsTable.id, id))
     .returning({ id: transactionsTable.id });
   if (transaction === undefined)
-    throw new Error(`Transaction with id of ${id} was not found.`);
+    throw new RecordNotFoundError(
+      `Transaction with id of ${id} was not found.`,
+    );
   return getTransactionOrThrow(id);
 }
 

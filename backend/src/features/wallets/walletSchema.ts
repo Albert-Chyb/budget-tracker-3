@@ -1,4 +1,8 @@
-import { createInsertSchema, createUpdateSchema } from "drizzle-orm/zod";
+import {
+  createInsertSchema,
+  createSelectSchema,
+  createUpdateSchema,
+} from "drizzle-orm/zod";
 import z from "zod";
 import { walletsTable } from "../../database/schema/tables/walletsTable";
 
@@ -6,6 +10,10 @@ const refinements = {
   name: (schema: z.ZodString) => schema.trim().min(1),
   balance: (schema: z.ZodNumber) => schema.min(0),
 };
+
+export const walletSchema = createSelectSchema(walletsTable, refinements);
+
+export type Wallet = z.infer<typeof walletSchema>;
 
 export const walletInsertSchema = createInsertSchema(walletsTable, refinements);
 

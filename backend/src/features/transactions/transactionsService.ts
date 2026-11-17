@@ -29,6 +29,45 @@ const queryBase = {
   },
 } as const;
 
+type TransactionErrorContext = {
+  categoryId?: TransactionInsert["categoryId"];
+  walletId?: TransactionInsert["walletId"];
+};
+
+function rethrowTransactionError(
+  error: unknown,
+  context: TransactionErrorContext = {},
+): never {
+  if (
+    error instanceof DrizzleQueryError &&
+    error.cause instanceof DatabaseError
+  ) {
+    const databaseError = error.cause;
+
+    if (
+      isTransactionCategoryNotFoundError(databaseError) &&
+      context.categoryId !== undefined
+    ) {
+      throw new TransactionCategoryNotFoundError(context.categoryId);
+    }
+
+    if (
+      isTransactionWalletNotFoundError(databaseError) &&
+      context.walletId !== undefined
+    ) {
+      throw new TransactionWalletNotFoundError(context.walletId);
+    }
+
+    if (isInsufficientWalletBalanceError(databaseError)) {
+      const walletId =
+        context.walletId ?? getWalletIdWithInsufficientBalance(databaseError);
+      throw new InsufficientWalletBalanceError(walletId);
+    }
+  }
+
+  throw error;
+}
+
 export function getTransactions(): Promise<Transaction[]> {
   return database.query.transactions.findMany(queryBase) as Promise<
     Transaction[]
@@ -64,23 +103,7 @@ export async function createTransaction(
       .returning({ id: transactionsTable.id });
     return getTransactionOrThrow(transaction!.id);
   } catch (error) {
-    if (
-      error instanceof DrizzleQueryError &&
-      error.cause instanceof DatabaseError
-    ) {
-      const databaseError = error.cause;
-
-      if (isInsufficientWalletBalanceError(databaseError))
-        throw new InsufficientWalletBalanceError(data.walletId);
-
-      if (isTransactionWalletNotFoundError(databaseError))
-        throw new TransactionCategoryNotFoundError(data.categoryId);
-
-      if (isTransactionCategoryNotFoundError(databaseError))
-        throw new TransactionWalletNotFoundError(data.walletId);
-    }
-
-    throw error;
+    rethrowTransactionError(error, data);
   }
 }
 
@@ -96,25 +119,7 @@ export async function updateTransaction(
       .returning();
     return getTransactionOrThrow(id);
   } catch (error) {
-    if (
-      error instanceof DrizzleQueryError &&
-      error.cause instanceof DatabaseError
-    ) {
-      const databaseError = error.cause;
-
-      if (data.categoryId && isTransactionCategoryNotFoundError(databaseError))
-        throw new TransactionCategoryNotFoundError(data.categoryId);
-
-      if (data.walletId && isTransactionWalletNotFoundError(databaseError))
-        throw new TransactionWalletNotFoundError(data.walletId);
-
-      if (isInsufficientWalletBalanceError(databaseError))
-        throw new InsufficientWalletBalanceError(
-          getWalletIdWithInsufficientBalance(databaseError),
-        );
-    }
-
-    throw error;
+    rethrowTransactionError(error, data);
   }
 }
 
@@ -129,18 +134,6 @@ export async function deleteTransaction(
       .where(eq(transactionsTable.id, id));
     return transaction;
   } catch (error) {
-    if (
-      error instanceof DrizzleQueryError &&
-      error.cause instanceof DatabaseError
-    ) {
-      const databaseError = error.cause;
-
-      if (isInsufficientWalletBalanceError(databaseError))
-        throw new InsufficientWalletBalanceError(
-          getWalletIdWithInsufficientBalance(databaseError),
-        );
-    }
-
-    throw error;
+    rethrowTransactionError(error);
   }
 }

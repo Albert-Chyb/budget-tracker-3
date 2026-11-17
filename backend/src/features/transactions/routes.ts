@@ -2,6 +2,9 @@ import { Hono } from "hono";
 import { validateBody } from "../../shared/http/validateBody";
 import { validatePathParams } from "../../shared/http/validatePathParams";
 import { recordIdPathParamSchema } from "../../shared/schemas/recordIdPathParamSchema";
+import { InsufficientWalletBalanceError } from "./errors/InsufficientWalletBalanceError";
+import { TransactionCategoryNotFoundError } from "./errors/TransactionCategoryNotFoundError";
+import { TransactionWalletNotFoundError } from "./errors/TransactionWalletNotFoundError";
 import {
   transactionInsertSchema,
   transactionUpdateSchema,
@@ -15,14 +18,22 @@ import {
 
 const routes = new Hono();
 
-routes.get("/", async (c) => {
-  return c.json(await getTransactions());
-});
+routes.onError((error, c) => {
+  if (
+    error instanceof TransactionWalletNotFoundError ||
+    error instanceof TransactionCategoryNotFoundError ||
+    error instanceof InsufficientWalletBalanceError
+  ) {
+    return c.json(
+      {
+        name: error.name,
+        message: error.message,
+      },
+      422,
+    );
+  }
 
-routes.post("/", validateBody(transactionInsertSchema), async (c) => {
-  const body = c.get("validBody");
-  const transaction = await createTransaction(body);
-  return c.json(transaction, 201);
+  throw error;
 });
 
 routes.patch(
@@ -36,6 +47,16 @@ routes.patch(
     return c.json(transaction);
   },
 );
+
+routes.get("/", async (c) => {
+  return c.json(await getTransactions());
+});
+
+routes.post("/", validateBody(transactionInsertSchema), async (c) => {
+  const body = c.get("validBody");
+  const transaction = await createTransaction(body);
+  return c.json(transaction, 201);
+});
 
 routes.delete(
   "/:id",
